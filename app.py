@@ -25,9 +25,9 @@ if api_key:
     
     # Inisialisasi Session State agar memori tidak hilang
     if "chat_session" not in st.session_state:
-        # Menggunakan gemini-1.5-pro yang terbukti paling stabil untuk function calling
+        # PERBAIKAN FINAL: Menggunakan model generasi terbaru Gemini 2.5 Flash
         model = genai.GenerativeModel(
-            model_name='gemini-1.5-pro',
+            model_name='gemini-2.5-flash',
             tools=[cek_status_server]
         )
         st.session_state.chat_session = model.start_chat(enable_automatic_function_calling=True)
