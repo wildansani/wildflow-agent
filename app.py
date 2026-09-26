@@ -1,15 +1,36 @@
 import streamlit as st
 import google.generativeai as genai
+import time
 
-# Konfigurasi Halaman
-st.set_page_config(page_title="WildFlow Agent", page_icon="⚡")
-st.title("⚡ WildFlow System")
-st.caption("AI SysAdmin Assistant - Interactive Mode")
+# 1. Konfigurasi Halaman (Mode Layar Penuh seperti Gemini)
+st.set_page_config(page_title="WildFlow AI", page_icon="✨", layout="wide")
 
-# Sidebar untuk input API Key
-api_key = st.sidebar.text_input("Masukkan Gemini API Key", type="password")
+# CSS Custom untuk menyembunyikan elemen bawaan Streamlit agar UI lebih bersih
+st.markdown("""
+    <style>
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    </style>
+    """, unsafe_allow_html=True)
 
-# Tools (Fungsi Aksi WildFlow)
+# 2. Desain Sidebar (Menu Samping)
+with st.sidebar:
+    st.title("✨ WildFlow AI")
+    st.caption("Powered by Gemini 3.8 Flash")
+    
+    api_key = st.text_input("Gemini API Key", type="password")
+    
+    st.divider()
+    
+    # Tombol Obrolan Baru
+    if st.button("➕ Obrolan Baru", use_container_width=True):
+        st.session_state.messages = []
+        if "chat_session" in st.session_state:
+            del st.session_state.chat_session
+        st.rerun()
+
+# 3. Tools (Fungsi Aksi)
 def cek_status_server(ip_address: str) -> str:
     """Mengecek status jaringan dan beban dari sebuah server berdasarkan IP Address."""
     if ip_address == "192.168.1.10":
@@ -19,39 +40,51 @@ def cek_status_server(ip_address: str) -> str:
     else:
         return f"IP {ip_address} tidak dikenali dalam infrastruktur."
 
-# Logika Utama
+# 4. Logika Utama
 if api_key:
     genai.configure(api_key=api_key)
     
-    # Inisialisasi Session State agar memori tidak hilang
+    # Inisialisasi Sesi & Persona
     if "chat_session" not in st.session_state:
-        # Menggunakan model gemini-3.8-flash sesuai instruksi dari sistem Google
         model = genai.GenerativeModel(
             model_name='gemini-3.8-flash',
-            tools=[cek_status_server]
+            tools=[cek_status_server],
+            system_instruction="Kamu adalah WildFlow, AI asisten cerdas yang diciptakan oleh programmer bernama Wildan Sani. Gunakan nada bicara yang profesional namun ramah. Gunakan format markdown untuk menyusun jawaban agar rapi."
         )
         st.session_state.chat_session = model.start_chat(enable_automatic_function_calling=True)
-        st.session_state.messages = []
+        # Pesan sambutan bawaan
+        st.session_state.messages = [{"role": "assistant", "content": "Halo! Saya WildFlow. Ada sistem yang perlu saya cek atau bantu hari ini?"}]
 
-    # Render ulang riwayat pesan
+    # 5. Render Riwayat Pesan dengan Avatar
     for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
+        avatar = "🧑‍💻" if message["role"] == "user" else "✨"
+        with st.chat_message(message["role"], avatar=avatar):
             st.markdown(message["content"])
 
-    # Tangkap input pengguna
-    if prompt := st.chat_input("Tanya WildFlow (misal: Cek status IP 192.168.1.10)"):
+    # 6. Tangkap Input Pengguna
+    if prompt := st.chat_input("Ketik pesan ke WildFlow di sini..."):
+        # Tampilkan input pengguna
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
+        with st.chat_message("user", avatar="🧑‍💻"):
             st.markdown(prompt)
 
-        # Proses response AI dengan penanganan error
-        with st.chat_message("assistant"):
-            with st.spinner("WildFlow sedang memproses..."):
+        # Tampilkan respons AI dengan efek streaming (mengetik)
+        with st.chat_message("assistant", avatar="✨"):
+            with st.spinner("Berpikir..."):
                 try:
                     response = st.session_state.chat_session.send_message(prompt)
-                    st.markdown(response.text)
+                    
+                    # Generator untuk membuat efek teks mengalir (streaming)
+                    def stream_data(text):
+                        for word in text.split(" "):
+                            yield word + " "
+                            time.sleep(0.04) # Kecepatan mengetik
+                            
+                    st.write_stream(stream_data(response.text))
                     st.session_state.messages.append({"role": "assistant", "content": response.text})
                 except Exception as e:
                     st.error(f"Terjadi kesalahan pada sistem AI: {e}")
 else:
-    st.info("Silakan masukkan Gemini API Key di menu sebelah kiri untuk mengaktifkan WildFlow.")
+    # Tampilan Halaman Depan jika API Key belum dimasukkan
+    st.title("Selamat Datang di WildFlow AI ✨")
+    st.write("Silakan masukkan **Gemini API Key** di menu sebelah kiri untuk mengaktifkan sistem.")
