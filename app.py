@@ -25,8 +25,9 @@ if api_key:
     
     # Inisialisasi Session State agar memori tidak hilang
     if "chat_session" not in st.session_state:
+        # PERBAIKAN: Menambahkan 'models/' pada nama model
         model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash',
+            model_name='models/gemini-1.5-flash',
             tools=[cek_status_server]
         )
         st.session_state.chat_session = model.start_chat(enable_automatic_function_calling=True)
@@ -43,11 +44,14 @@ if api_key:
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Proses response AI
+        # Proses response AI dengan penanganan error
         with st.chat_message("assistant"):
-            with st.spinner("WildFlow sedang menganalisis jaringan..."):
-                response = st.session_state.chat_session.send_message(prompt)
-                st.markdown(response.text)
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
+            with st.spinner("WildFlow sedang memproses..."):
+                try:
+                    response = st.session_state.chat_session.send_message(prompt)
+                    st.markdown(response.text)
+                    st.session_state.messages.append({"role": "assistant", "content": response.text})
+                except Exception as e:
+                    st.error(f"Terjadi kesalahan pada sistem AI: {e}")
 else:
     st.info("Silakan masukkan Gemini API Key di menu sebelah kiri untuk mengaktifkan WildFlow.")
